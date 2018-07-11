@@ -1,4 +1,5 @@
 (ns consul.core
+  "Core consul constructor functions."
   (:require [consul.impl :refer :all]
             [consul.proto :refer [IConsul]]
             [consul.proto.acl :as acl]
@@ -30,8 +31,15 @@
            [com.orbitz.consul.async Callback]))
 
 (defn host-and-port
+  "Construct a com.google.common.net.HostAndPort.
+
+  Arguments may be any of:
+
+  * A HostAndPort instance.
+  * A single host string, or a host:port string.
+  * A host string, and a port number.
+  * A map with keys :host and optionally :port."
   [& args]
-  (println "host-and-port:" args)
   (cond (instance? HostAndPort (first args))
         (first args)
 
@@ -42,12 +50,28 @@
         (HostAndPort/fromParts (first args) (second args))
 
         :else
-        (let [[& {:keys [host port]}] (apply hash-map (map->seq args))]
+        (let [{:keys [host port]} (apply hash-map args)]
           (if (some? port)
             (HostAndPort/fromParts host port)
             (HostAndPort/fromHost host)))))
 
 (defn cache-config
+  "Create a com.orbitz.consul.config.CacheConfig.
+
+  If the sole argument is a CacheConfig, return that argument.
+
+  Otherwise, build a CacheConfig based on keyword keys:
+
+  * :back-off-delay  A sequence of the [min-delay max-delay], or a single [delay] value. Values are duration specs.
+  * :min-delay-between-requests The min delay between requests. A duration spec.
+  * :timeout-auto-adjusted A boolean.
+  * :timeout-auto-adjustment-margin The timeout adjustment margin. A duration spec.
+  * :refresh-error-logged-as-warning A boolean.
+  * :refresh-error-logged-as-error A boolean.
+  * :refresh-error-logged-as A com.orbitz.conul.config.CacheConfig$RefreshErrorLogConsumer instance.
+
+  All duration specs can either be a long (milliseconds), a float (seconds), a pair of [long java.util.concurrent.TimeUnit],
+  a java.time.Duration, or a string to parse with java.time.Duration/parse."
   [& args]
   (if (instance? CacheConfig (first args))
     (first args)
@@ -68,6 +92,13 @@
             (.build $)))))
 
 (defn client-configuration
+  "Create a com.orbitz.consul.config.ClientConfig.
+
+  If the sole argument is a ClientConfig, return that argument.
+
+  Otherwise, build a ClientConfig based on keyword keys:
+
+  * :cache-config The cache config. See consul.core/cache-config."
   [& args]
   (if (instance? ClientConfig (first args))
     (first args)
@@ -76,21 +107,52 @@
       (ClientConfig. (apply ->cache-config cache-config)))))
 
 (defn consul
+  "Construct a consul client.
+
+  Passing in an instance of com.orbitz.consul.Consul as the only argument
+  returns that argument.
+
+  Otherwise, a new consul client is constructed based on keyword arguments:
+
+  * :url            A java.net.URL, the consul agent URL to use.
+  * :ping           A boolean, whether or not to ping the server first.
+  * :basic-auth     Basic authentication credentials. This can be a map with keys
+                    :username and :password, or a sequence [username, password].
+  * :acl-token      An ACL token string.
+  * :headers        A map of string->string, headers to add to requests.
+  * :consul-bookend A com.orbitz.consul.util.bookend.ConsulBookend instance.
+  * :host-and-port  A map of keys (:host, :port), or a string \"host:port\",
+                    or a com.google.common.net.HostAndPort instance. The host
+                    and port to connect to the consul agent.
+  * :ssl-context    A javax.net.ssl.SSLContext instance.
+  * :trust-manager  A javax.net.ssl.X509TrustManager instance.
+  * :hostname-verifier A javax.net.ssl.HostnameVerifier instance.
+  * :proxy          A java.net.Proxy instance.
+  * :connect-timeout The connect timeout; this can be a long (milliseconds),
+                     a float (seconds), a pair of [long, java.util.concurrent.TimeUnit],
+                     a java.time.Duration, or a string (parsed via Duration.parse). The
+                     minimum granularity is milliseconds.
+  * :read-timeout   The read timeout; see connect-timeout.
+  * :write-timeout  The write timeout; see connect-timeout.
+  * :executor-service A java.util.concurrent.ExecutorService instance.
+  * :client-configuration A com.orbitz.consul.config.ClientConfig instance, or a map
+                          that specs out fields of that class. See consul.core/client-configuration.
+  * :client-event-callback A com.orbitz.consul.monitoring.ClientEventCallback instance."
   [& args]
   (if (and (= 1 (count args)) (instance? Consul (first args)))
     (first args)
     (let [->host-and-port host-and-port
           ->client-configuration client-configuration
           _ (println "args are:" args)
-          {:keys [url ping basicAuth acl-token headers consul-bookend host-and-port ssl-context trust-manager
+          {:keys [url ping basic-auth acl-token headers consul-bookend host-and-port ssl-context trust-manager
                   hostname-verifier proxy connect-timeout read-timeout write-timeout executor-service
                   client-configuration client-event-callback]} (apply hash-map args)]
       (-> (Consul/builder)
           (with- url .withUrl)
           (with- ping .ping)
-          (as-> $ (cond (map? basicAuth) (.withBasicAuth $ (:user basicAuth) (:password basicAuth))
-                        (seq basicAuth) (.withBasicAuth $ (first basicAuth) (second basicAuth))
-                        (nil? basicAuth) $))
+          (as-> $ (cond (map? basic-auth) (.withBasicAuth $ (:user basic-auth) (:password basic-auth))
+                        (seq basic-auth) (.withBasicAuth $ (first basic-auth) (second basic-auth))
+                        (nil? basic-auth) $))
           (with- acl-token .withAclToken)
           (as-> $ (cond (map? headers) (.withHeaders $ headers)
                         (nil? headers) $))
@@ -124,6 +186,22 @@
   (snapshot-client [this] (.statusClient this)))
 
 (defn reg-check
+  "Construct a com.orbitz.consul.model.agent.Registration$RegCheck.
+
+  The argument may be an instance of RegCheck, or keyword arguments:
+
+  * :script      The script check string.
+  * :interval    The check interval duration string.
+  * :ttl         The TTL duration string.
+  * :http        The HTTP check string.
+  * :tcp         The TCP check string.
+  * :grpc        The gRPC check string.
+  * :grpc-use-tls? A boolean, whether to use TLS for gRPC checks.
+  * :timeout     The timeout duration string.
+  * :notes       The notes string.
+  * :deregister-critical-services-after A duration string to deregister critical services after.
+  * :tls-skip-verify A boolean, whether to skip verification for TLS checks.
+  * :status      A status string."
   [& args]
   (if (instance? Registration$RegCheck (first args))
     (first args)
@@ -145,6 +223,19 @@
           (.build)))))
 
 (defn registration
+  "Construct a com.orbitz.consul.model.agent.Registration.
+
+  The argument may be an instance of Registration, or keyword arguments.
+
+  * :name        The service name string.
+  * :id          The optional service ID string.
+  * :address     The service address.
+  * :port        The service port.
+  * :checks      A sequence of checks; each element may be a RegCheck instance, or
+                 a map containing keys as described in consul.core/reg-check.
+  * :tags        A sequence of tag strings.
+  * :meta        A map of metadata (string->string).
+  * :enable-tag-override A boolean."
   [& args]
   (if (instance? Registration (first args))
     (first args)
@@ -154,13 +245,14 @@
           (with- id .id)
           (with- address .address)
           (with- port .port)
-          (with- (not-empty (map #(apply reg-check %) checks)) .checks)
+          (with- (not-empty (map #(apply reg-check (map->seq %)) checks)) .checks)
           (with- tags .tags)
           (with- meta .meta)
           (with- enable-tag-override .enableTagOverride)
           (.build)))))
 
 (defn consistency-mode
+  "Coerce the argument to a com.orbitz.consul.option.ConsistencyMode."
   [v]
   (cond (instance? ConsistencyMode v)
         v
@@ -174,6 +266,18 @@
         (nil? v) nil))
 
 (defn query-options
+  "Construct a com.orbitz.consul.option.QueryOptions.
+
+  The argument may be a QueryOptions instance, or keyword keys:
+
+  * :wait        The wait duration string (e.g. 1m, 30s).
+  * :token       The token string.
+  * :index       A BigInteger index.
+  * :near        The near string.
+  * :datacenter  The datacenter string.
+  * :node-meta   The node metadata map.
+  * :tags        The list of service tags.
+  * :consistency-mode A string, keyword, or ConsistencyMode value."
   [& args]
   (if (instance? QueryOptions (first args))
     (first args)
@@ -190,39 +294,63 @@
           (with- (->cm consistency-mode) .consistencyMode)
           (.build)))))
 
-(extend-protocol agent/IAgent
-  AgentClient
-  (registered? [this service] (.isRegistered this service))
-  (ping [this] (.ping this))
-  (register! [this args] (.register this (apply registration (map->seq args))))
-  (register! [this args opts] (.register this (apply registration (map->seq args)) (apply query-options (map->seq opts))))
-  (deregister! [this service-id] (.deregister this service-id))
-  (deregister! [this service-id opts] (.deregister this service-id (apply query-options (map->seq opts))))
-  (agent [this] (to-bean-map (.getAgent this)))
-  (checks [this] (into {} (map (fn [[k v]] (vector k (to-bean-map v))) (.getChecks this))))
-  (services [this] (into {} (map (fn [[k v]] (vector k (to-bean-map v))) (.getServices this))))
-  (members [this] (map to-bean-map (.getMembers this)))
-  (force-leave! [this node-id] (.forceLeave this node-id))
-  (check! [this check-id state note] (.check this check-id state note))
-  (check-ttl! [this service-id state note] (.checkTtl this service-id state note))
-  (pass! [this service-id] (.pass this service-id))
-  (pass! [this service-id note] (.pass this service-id note))
-  (warn! [this service-id] (.warn this service-id))
-  (warn! [this service-id note] (.warn this service-id note))
-  (fail! [this service-id] (.fail this service-id))
-  (fail! [this service-id note] (.fail this service-id note))
-  (pass-check! [this check-id] (.passCheck this check-id))
-  (pass-check! [this check-id note] (.passCheck this check-id note))
-  (warn-check! [this check-id] (.warnCheck this check-id))
-  (warn-check! [this check-id note] (.warnCheck this check-id note))
-  (fail-check! [this check-id] (.failCheck this check-id))
-  (fail-check! [this check-id note] (.failCheck this check-id note))
-  (join! [this address] (.join this address))
-  (join! [this address wan?] (.join this address wan?))
-  (maintenance-mode! [this service-id enable?] (.toggleMaintenanceMode this service-id enable?))
-  (maintenance-mode! [this service-id enable? reason] (.toggleMaintenanceMode this service-id enable? reason)))
+(declare check)
+
+(extend AgentClient
+  agent/IAgent
+  {:registered? (fn registered? [this service] (.isRegistered this service))
+   :ping (fn ping [this] (.ping this))
+   :register (fn register!
+               ([this args] (.register this (apply registration (map->seq args))))
+               ([this args opts] (.register this (apply registration (map->seq args)) (apply query-options (map->seq opts)))))
+   :deregister! (fn deregister!
+                  ([this service-id] (.deregister this service-id))
+                  ([this service-id opts] (.deregister this service-id (apply query-options (map->seq opts)))))
+   :register-check! (fn register-check!
+                      [this args]
+                      (.registerCheck this (apply check (map->seq args))))
+   :deregister-check! (fn deregister-check!
+                        [this check-id]
+                        (.deregisterCheck this check-id))
+   :agent (fn agent [this] (to-bean-map (.getAgent this)))
+   :checks (fn checks [this] (into {} (map (fn [[k v]] (vector k (to-bean-map v))) (.getChecks this))))
+   :services (fn services [this] (into {} (map (fn [[k v]] (vector k (to-bean-map v))) (.getServices this))))
+   :members (fn members [this] (map to-bean-map (.getMembers this)))
+   :force-leave! (fn force-leave! [this node-id] (.forceLeave this node-id))
+   :check! (fn check! [this check-id state note] (.check this check-id state note))
+   :check-ttl! (fn check-ttl! [this service-id state note] (.checkTtl this service-id state note))
+   :pass! (fn pass!
+            ([this service-id] (.pass this service-id))
+            ([this service-id note] (.pass this service-id note)))
+   :warn! (fn warn!
+            ([this service-id] (.warn this service-id))
+            ([this service-id note] (.warn this service-id note)))
+   :fail! (fn fail!
+            ([this service-id] (.fail this service-id))
+            ([this service-id note] (.fail this service-id note)))
+   :pass-check! (fn pass-check!
+                  ([this check-id] (.passCheck this check-id))
+                  ([this check-id note] (.passCheck this check-id note)))
+   :warn-check! (fn warn-check!
+                  ([this check-id] (.warnCheck this check-id))
+                  ([this check-id note] (.warnCheck this check-id note)))
+   :fail-check! (fn fail-check!
+                  ([this check-id] (.failCheck this check-id))
+                  ([this check-id note] (.failCheck this check-id note)))
+   :join! (fn join!
+            ([this address] (.join this address))
+            ([this address wan?] (.join this address wan?)))
+   :maintenance-mode! (fn maintenance-mode!
+                        ([this service-id enable?] (.toggleMaintenanceMode this service-id enable?))
+                        ([this service-id enable? reason] (.toggleMaintenanceMode this service-id enable? reason)))})
 
 (defn tagged-addresses
+  "Construct a com.orbitz.consul.model.catalog.TaggedAddresses.
+
+  The arguments may be a TaggedAddresses instance, or keyword arguments:
+
+  * :lan   The LAN address string.
+  * :wan   The WAN address string."
   [& args]
   (if (instance? TaggedAddresses (first args))
     (first args)
@@ -233,6 +361,24 @@
           (.build)))))
 
 (defn check
+  "Construct a com.orbitz.consul.model.agent.Check.
+
+  The arguments may be a single Check instanec, or keyword arguments:
+
+  * :id          The check ID string.
+  * :name        The check name string.
+  * :notes       The check notes string.
+  * :output      The check output string.
+  * :script      The check script string.
+  * :interval    The check interval duration string.
+  * :ttl         The check TTL duration string.
+  * :http        The HTTP check string.
+  * :tcp         The TCP check string.
+  * :grpc        The gRPC check string.
+  * :grpc-use-tls? A boolean, whether to use TLS for gRPC checks.
+  * :service-id  The service ID string.
+  * :service-tags A sequence of service tag strings.
+  * :deregister-critical-service-after A duration string."
   [& args]
   (if (instance? Check (first args))
     (first args)
@@ -256,6 +402,11 @@
           (.build)))))
 
 (defn write-request
+  "Construct a com.orbitz.consul.model.catalog.WriteRequest.
+
+  The arguments may be a single WriteRequest instance, or keyword keys:
+
+  * :token       The write request token string."
   [& args]
   (if (instance? WriteRequest (first args))
     (first args)
@@ -265,6 +416,9 @@
           (.build)))))
 
 (defn catalog-registration
+  "Construct a com.orbitz.consul.model.catalog.CatalogRegistration.
+
+  The arguments may be a single CatalogRegistration instance"
   [& args]
   (if (instance? CatalogRegistration (first args))
     (first args)
@@ -283,7 +437,7 @@
           (with- (when (some? write-request) (apply ->wr write-request)) .writeRequest)
           (.build)))))
 
-(defn catalog-deregistration
+(defn ^:no-doc catalog-deregistration
   [& args]
   (if (instance? CatalogDeregistration (first args))
     (first args)
@@ -313,7 +467,7 @@
    :deregister! (fn deregister! ([this args] (.deregister this (apply catalog-deregistration (map->seq args))))
                                 ([this args opts] (.deregister this (apply catalog-deregistration (map->seq args)) (apply query-options (map->seq opts)))))})
 
-(defn acl-token
+(defn ^:no-doc acl-token
   [& args]
   (if (instance? AclToken (first args))
     (first args)
@@ -334,7 +488,7 @@
    :clone-acl (fn clone-acl [this id] (.cloneAcl this id))
    :list-acls (fn list-acls [this] (to-bean-map (.listAcls this)))})
 
-(defn ->state
+(defn ^:no-doc ->state
   [s]
   (cond (instance? State s) s
         (string? s) (State/fromName s)))
@@ -357,13 +511,24 @@
                         ([this service] (to-bean-map (.getAllServiceInstances this service)))
                         ([this service opts] (to-bean-map (.getAllServiceInstances this service (apply query-options (map->seq opts))))))})
 
-(defn ->charset
+(defn ^:no-doc ->charset
   [v]
   (cond (nil? v) nil
         (instance? Charset v) v
         (string? v) (Charset/forName v)))
 
 (defn operation
+  "Construct a com.orbitz.consul.model.kv.Operation.
+
+  If passed a single Operation argument, return that argument.
+  Otherwise interpret the keyword arguments:
+
+  * :verb       The verb string.
+  * :key        The key string.
+  * :value      The value string.
+  * :flags      A long bitset of flags.
+  * :index      The BigInteger index value.
+  * :session    The session string."
   [& args]
   (if (instance? Operation (first args))
     (first args)
@@ -378,6 +543,13 @@
           (.build)))))
 
 (defn transaction-options
+  "Construct a com.orbitz.consul.option.TransactionOptions.
+
+  If passed a single TransactionOptions argument, return that argument.
+  Otherwise interpret the keyword arguments:
+
+  * :datacenter       The datacenter string.
+  * :consistency-mode A ConsistencyMode instance, or a string consistency mode to parse."
   [& args]
   (if (instance? TransactionOptions (first args))
     (first args)
@@ -423,7 +595,7 @@
   {:leader (fn [this] (.getLeader this))
    :peers (fn [this] (.getPeers this))})
 
-(defn session
+(defn ^:no-doc session
   [& args]
   (if (instance? Session (first args))
     (first args)
@@ -455,7 +627,7 @@
                     ([this] (to-bean-map (.listSessions this)))
                     ([this dc] (to-bean-map (.listSessions this dc))))})
 
-(defn event-options
+(defn ^:no-doc event-options
   [& args]
   (if (instance? EventOptions (first args))
     (first args)
@@ -482,7 +654,7 @@
                   ([this name opts]
                    (to-bean-map (.listEvents this name (apply query-options (map->seq opts))))))})
 
-(defn template
+(defn ^:no-doc template
   [& args]
   (if (instance? Template (first args))
     (first args)
@@ -492,7 +664,7 @@
           (with- regex .regExp)
           (.build)))))
 
-(defn dns-query
+(defn ^:no-doc dns-query
   [& args]
   (if (instance? DnsQuery (first args))
     (first args)
@@ -501,7 +673,7 @@
           (with- ttl .ttl)
           (.build)))))
 
-(defn prepared-query
+(defn ^:no-doc prepared-query
   [& args]
   (if (instance? PreparedQuery (first args))
     (first args)
@@ -531,10 +703,10 @@
 
 (extend CoordinateClient
   coordinate/ICoordinate
-  {:datacenters (fn datacenters [this] (.getDatacenters this))
+  {:datacenters (fn datacenters [this] (to-bean-map (.getDatacenters this)))
    :nodes (fn nodes
-            ([this] (.getNodes this))
-            ([this dc] (.getNodes this dc)))})
+            ([this] (to-bean-map (.getNodes this)))
+            ([this dc] (to-bean-map (.getNodes this dc))))})
 
 (extend OperatorClient
   operator/IOperator

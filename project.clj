@@ -5,4 +5,15 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [com.orbitz.consul/consul-client "1.2.1"]]
-  :plugins [[lein-codox "0.9.6"]])
+  :plugins [[lein-codox "0.9.6"]]
+  :codox {:output-path "docs"}
+  :release-tasks [["vcs" "assert-committed"]
+                  ["change" "version"
+                   "leiningen.release/bump-version" "release"]
+                  ["codox"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag"]
+                  ["deploy" "clojars"]
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ["vcs" "commit"]
+                  ["vcs" "push"]])

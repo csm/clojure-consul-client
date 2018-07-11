@@ -1,4 +1,4 @@
-(ns consul.impl
+(ns ^:no-doc consul.impl
   (:import [java.time Duration]
            [java.util.concurrent TimeUnit]
            [java.util Optional Map]))
@@ -43,10 +43,12 @@
   (to-bean-map [this] (bean this))
 
   com.orbitz.consul.model.health.HealthCheck
-  (to-bean-map [this] (bean this))
+  (to-bean-map [this] (into {} (map (fn [[k v]] [k (to-bean-map v)])
+                                    (bean this))))
 
   com.orbitz.consul.model.health.ServiceHealth
-  (to-bean-map [this] (update (bean this) :checks to-bean-map))
+  (to-bean-map [this] (into {} (map (fn [[k v]] [k (to-bean-map v)])
+                                    (bean this))))
 
   com.orbitz.consul.model.kv.Value
   (to-bean-map [this] (->> (bean this)
@@ -67,7 +69,8 @@
   (to-bean-map [this] (bean this))
 
   com.orbitz.consul.model.event.Event
-  (to-bean-map [this] (bean this))
+  (to-bean-map [this] (into {} (map (fn [[k v]] [k (to-bean-map v)])
+                                    (bean this))))
 
   com.orbitz.consul.model.query.StoredQuery
   (to-bean-map [this] (-> (bean this)
@@ -90,7 +93,31 @@
   (to-bean-map [this] (bean this))
 
   com.orbitz.consul.model.health.Service
-  (to-bean-map [this] (bean this)))
+  (to-bean-map [this] (into {} (map (fn [[k v]] [k (to-bean-map v)])
+                                    (bean this))))
+
+  com.orbitz.consul.model.agent.Member
+  (to-bean-map [this] (bean this))
+
+  com.orbitz.consul.model.catalog.CatalogService
+  (to-bean-map [this] (into {} (map (fn [[k v]] [k (to-bean-map v)])
+                                    (bean this))))
+
+  com.orbitz.consul.model.catalog.CatalogNode
+  (to-bean-map [this] (into {} (map (fn [[k v]] [k (to-bean-map v)])
+                                    (bean this))))
+
+  com.orbitz.consul.model.coordinate.Datacenter
+  (to-bean-map [this] (update (bean this) :coordinates to-bean-map))
+
+  com.orbitz.consul.model.coordinate.Coordinate
+  (to-bean-map [this] (update (bean this) :coord to-bean-map))
+
+  com.orbitz.consul.model.coordinate.Coord
+  (to-bean-map [this] (bean this))
+
+  com.orbitz.consul.model.EventResponse
+  (to-bean-map [this] (update (bean this) :events to-bean-map)))
 
 (defn to-millis
   [v]
