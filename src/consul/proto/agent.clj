@@ -1,0 +1,26 @@
+(ns consul.proto.agent
+  "Interface to com.orbitz.consul.AgentClient.")
+
+(defprotocol IAgent
+  (registered? [this service] "Tell if the service with the given name is registered. Returns a boolean.")
+  (ping [this] "Ping the agent.")
+  (register! [this registration] [this registration query-opts]
+    "Register a service.")
+  (deregister! [this args] [this args query-opts])
+  (register-check! [this args])
+  (deregister-check! [this check-id])
+  (agent [this])
+  (checks [this])
+  (services [this])
+  (members [this])
+  (force-leave! [this node-id])
+  (check! [this check-id state note])
+  (check-ttl! [this service-id state note])
+  (pass! [this service-id] [this service-id note])
+  (warn! [this service-id] [this service-id note])
+  (fail! [this service-id] [this service-id note])
+  (pass-check! [this check-id] [this check-id note])
+  (warn-check! [this check-id] [this check-id note])
+  (fail-check! [this check-id] [this check-id note])
+  (join! [this address] [this address wan?])
+  (maintenance-mode! [this service-id enable?] [this service-id enable? reason]))

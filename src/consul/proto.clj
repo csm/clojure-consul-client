@@ -1,0 +1,15 @@
+(ns consul.proto)
+
+(defprotocol IConsul
+  (agent-client [this])
+  (acl-client [this])
+  (catalog-client [this])
+  (health-client [this])
+  (kv-client [this])
+  (status-client [this])
+  (session-client [this])
+  (event-client [this])
+  (prepared-query-client [this])
+  (coordinate-client [this])
+  (operator-client [this])
+  (snapshot-client [this]))
