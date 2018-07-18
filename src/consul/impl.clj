@@ -172,5 +172,5 @@
 (defn map->seq
   [maybe-map]
   (if (map? maybe-map)
-    (flatten (seq maybe-map))
+    (mapcat (fn [[k v]] [k v]) maybe-map)
     maybe-map))
