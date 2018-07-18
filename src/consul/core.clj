@@ -143,7 +143,6 @@
     (first args)
     (let [->host-and-port host-and-port
           ->client-configuration client-configuration
-          _ (println "args are:" args)
           {:keys [url ping basic-auth acl-token headers consul-bookend host-and-port ssl-context trust-manager
                   hostname-verifier proxy connect-timeout read-timeout write-timeout executor-service
                   client-configuration client-event-callback]} (apply hash-map args)]
@@ -300,9 +299,9 @@
   agent/IAgent
   {:registered? (fn registered? [this service] (.isRegistered this service))
    :ping (fn ping [this] (.ping this))
-   :register (fn register!
-               ([this args] (.register this (apply registration (map->seq args))))
-               ([this args opts] (.register this (apply registration (map->seq args)) (apply query-options (map->seq opts)))))
+   :register! (fn register!
+                ([this args] (.register this (apply registration (map->seq args))))
+                ([this args opts] (.register this (apply registration (map->seq args)) (apply query-options (map->seq opts)))))
    :deregister! (fn deregister!
                   ([this service-id] (.deregister this service-id))
                   ([this service-id opts] (.deregister this service-id (apply query-options (map->seq opts)))))
