@@ -1,4 +1,4 @@
-(defproject com.github.csm/clojure-consul-client "0.1.1-SNAPSHOT"
+(defproject com.github.csm/clojure-consul-client "0.1.1"
   :description "Yet another consul client for Clojure"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
