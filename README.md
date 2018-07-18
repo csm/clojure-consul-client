@@ -1,5 +1,7 @@
 # clojure-consul-client
 
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.csm/clojure-consul-client.svg)](https://clojars.org/com.github.csm/clojure-consul-client)
+
 A clojure wrapper around [this Java consul client](https://github.com/rickfast/consul-client).
 
 ## Usage
