@@ -28,7 +28,8 @@
            [com.orbitz.consul.model.kv Operation ImmutableOperation]
            [com.orbitz.consul.model.session Session ImmutableSession]
            [com.orbitz.consul.model.query PreparedQuery ImmutablePreparedQuery Template ImmutableTemplate DnsQuery ImmutableDnsQuery]
-           [com.orbitz.consul.async Callback]))
+           [com.orbitz.consul.async Callback]
+           [com.orbitz.consul.model.health Service ImmutableService]))
 
 (defn host-and-port
   "Construct a com.google.common.net.HostAndPort.
@@ -62,7 +63,8 @@
 
   Otherwise, build a CacheConfig based on keyword keys:
 
-  * :back-off-delay  A sequence of the [min-delay max-delay], or a single [delay] value. Values are duration specs.
+  * :back-off-delay  The back-off delay, or the min back-off delay if back-off-max-delay is given. A duration spec.
+  * :back-off-max-delay The max back-off-delay. If specified, you must also specify :back-off-delay, which will be the min delay.
   * :min-delay-between-requests The min delay between requests. A duration spec.
   * :timeout-auto-adjusted A boolean.
   * :timeout-auto-adjustment-margin The timeout adjustment margin. A duration spec.
@@ -75,20 +77,20 @@
   [& args]
   (if (instance? CacheConfig (first args))
     (first args)
-    (let [{:keys [back-off-delay min-delay-between-requests timeout-auto-adjusted timeout-auto-adjustment-margin
+    (let [{:keys [back-off-delay back-off-max-delay min-delay-between-requests timeout-auto-adjusted timeout-auto-adjustment-margin
                   refresh-error-logged-as-warning refresh-error-logged-as-error refresh-error-logged-as]} (apply hash-map (map->seq args))]
       (as-> (CacheConfig/builder) ^CacheConfig$Builder $
-            (cond (and (seq back-off-delay) (= 2 (count back-off-delay)))
-                  (.withBackOffDelay $ (to-duration (first back-off-delay)) (to-duration (second back-off-delay)))
-                  (and (seq back-off-delay) (= 1 (count back-off-delay)))
-                  (.withBackOffDelay $ (to-duration (first back-off-delay)))
+            (cond (and (some? back-off-delay) (some? back-off-max-delay))
+                  (.withBackOffDelay $ (to-duration back-off-delay) (to-duration back-off-max-delay))
+                  (some? back-off-delay)
+                  (.withBackOffDelay $ (to-duration back-off-delay))
                   (nil? back-off-delay) $)
             (if (some? min-delay-between-requests) (.withMinDelayBetweenRequests $ (to-duration min-delay-between-requests)) $)
             (if (some? timeout-auto-adjusted) (.withTimeoutAutoAdjustmentEnabled $ (boolean timeout-auto-adjusted)) $)
             (if (some? timeout-auto-adjustment-margin) (.withTimeoutAutoAdjustmentMargin $ (to-duration timeout-auto-adjustment-margin)) $)
             (if refresh-error-logged-as-warning (.withRefreshErrorLoggedAsWarning $) $)
             (if refresh-error-logged-as-error (.withRefreshErrorLoggedAsError $) $)
-            (if (some? refresh-error-logged-as) (.withRefreshErrorLoggedAs $ refresh-error-logged-as))
+            (if (some? refresh-error-logged-as) (.withRefreshErrorLoggedAs $ refresh-error-logged-as) $)
             (.build $)))))
 
 (defn client-configuration
@@ -414,6 +416,32 @@
           (with- token .token)
           (.build)))))
 
+(defn service
+  "Construct a com.orbitz.consul.model.health.Service
+
+  The arguments may be a single Service instance, or keyword keys:
+
+  * :id                  The service ID string.
+  * :service             The service name string.
+  * :enable-tag-override A boolean.
+  * :tags                A list of tag strings.
+  * :address             The service address string.
+  * :meta                A map of string->string metadata.
+  * :port                The service port integer."
+  [& args]
+  (if (instance? Service (first args))
+    (first args)
+    (let [{:keys [id service enable-tag-override tags address meta port]} (apply hash-map args)]
+      (-> (ImmutableService/builder)
+          (with- id .id)
+          (with- service .service)
+          (with- enable-tag-override .enableTagOverride)
+          (with- tags .tags)
+          (with- address .address)
+          (with- meta .meta)
+          (with- port .port)
+          (.build)))))
+
 (defn catalog-registration
   "Construct a com.orbitz.consul.model.catalog.CatalogRegistration.
 
@@ -424,6 +452,7 @@
     (let [->ta tagged-addresses
           ->check check
           ->wr write-request
+          ->service service
           {:keys [datacenter node address tagged-addresses service check write-request]}
           (apply hash-map args)]
       (-> (ImmutableCatalogRegistration/builder)
@@ -431,7 +460,7 @@
           (with- node .node)
           (with- address .address)
           (with- (when (some? tagged-addresses) (apply ->ta (map->seq tagged-addresses))) .taggedAddresses)
-          (with- service .service)
+          (with- (when (some? service) (apply ->service (map->seq service))) .service)
           (with- (when (some? check) (apply ->check (map->seq check))) .check)
           (with- (when (some? write-request) (apply ->wr write-request)) .writeRequest)
           (.build)))))
