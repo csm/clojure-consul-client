@@ -43,7 +43,7 @@
   Returns a map of the response, possibly with a `:body`, on success;
   returns an anomaly map on failure."
   [client arg-map]
-  (v/invoke (:client client) (merge arg-map (dissoc arg-map :client))))
+  (v/invoke (:client client) (merge arg-map (dissoc client :client))))
 
 (defn ops
   "Return a map of operations this client supports."

@@ -10,4 +10,4 @@
   returns a manifold deferred that will yield the
   response."
   [client arg-map]
-  (v/invoke (:client client) (merge arg-map (dissoc arg-map :client))))
+  (v/invoke (:client client) (merge arg-map (dissoc client :client))))
