@@ -1,16 +1,14 @@
-(defproject com.github.csm/clojure-consul-client "0.1.3-SNAPSHOT"
+(defproject com.github.csm/clojure-consul-client "0.2.0-SNAPSHOT"
   :description "Yet another consul client for Clojure"
-  :url "http://example.com/FIXME"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [com.orbitz.consul/consul-client "1.2.1"]]
-  :plugins [[lein-codox "0.9.6"]]
-  :codox {:output-path "docs"}
+  :url "https://github.com/csm/clojure-consul-client"
+  :license {:name "MIT"
+            :url "https://opensource.org/licenses/MIT"}
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [com.github.csm/consul-api "0.1.1"]
+                 [com.github.csm/vainglory "0.1.2"]]
   :release-tasks [["vcs" "assert-committed"]
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
-                  ["codox"]
                   ["vcs" "commit"]
                   ["vcs" "tag"]
                   ["deploy" "clojars"]
