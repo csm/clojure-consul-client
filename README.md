@@ -1,6 +1,6 @@
 # clojure-consul-client
 
-[![Clojars Project](https://img.shields.io/clojars/v/com.github.csm/clojure-consul-client.svg)](https://clojars.org/com.github.csm/clojure-consul-client)
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.csm/clojure-consul-client.svg)](https://clojars.org/com.github.csm/clojure-consul-client) [![cljdoc](https://cljdoc.org/badge/com.github.csm/clojure-consul-client)](https://cljdoc.org/d/com.github.csm/clojure-consul-client)
 
 A synchronous and asynchronous [Consul](https://consul.io) client
 built on [vainglory](https://github.com/csm/vainglory) and
