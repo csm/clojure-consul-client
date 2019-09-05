@@ -25,7 +25,7 @@
   {:client (v/client @api-spec (assoc arg-map :api-id "consul"))
    :scheme scheme
    :host host
-   :port 8500})
+   :port port})
 
 (defn invoke
   "Invoke a consul API call.

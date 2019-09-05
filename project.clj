@@ -4,8 +4,8 @@
   :license {:name "MIT"
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.10.1"]
-                 [com.github.csm/consul-api "0.1.0"]
-                 [com.github.csm/vainglory "0.1.1"]]
+                 [com.github.csm/consul-api "0.1.1"]
+                 [com.github.csm/vainglory "0.1.2"]]
   :release-tasks [["vcs" "assert-committed"]
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
